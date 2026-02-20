@@ -27,35 +27,49 @@
   </table>
 
 <script>
-  const workerBase = "https://aureo-leads.zerocppscript.workers.dev";
+  <script>
+  const workerBase = "https://aureo-leads.zerocppscript.workers.dev"; // <-- проверь
 
+  function tg() {
+    return window.Telegram?.WebApp;
+  }
   function initData() {
-    return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) ? Telegram.WebApp.initData : "";
+    return tg()?.initData || "";
+  }
+  function tgInfo() {
+    const t = tg();
+    const userId = t?.initDataUnsafe?.user?.id || "-";
+    return `tg:${!!t} initData:${(t?.initData||"").length} user:${userId}`;
   }
 
-  async function api(path, opts={}) {
+  async function api(path, opts = {}) {
     const r = await fetch(workerBase + path, {
       ...opts,
       headers: {
-        ...(opts.headers||{}),
+        ...(opts.headers || {}),
         "X-TG-INITDATA": initData(),
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     });
     return r.json();
   }
 
   async function load() {
-    const tg = window.Telegram?.WebApp;
-    document.getElementById("status").textContent =
-    `tg:${!!tg} initData:${(tg?.initData||"").length} user:${tg?.initDataUnsafe?.user?.id || "-"}`;
+    const statusEl = document.getElementById("status");
+    statusEl.textContent = `Loading… | ${tgInfo()}`;
 
     const j = await api("/api/leads");
-    if(!j.ok){ document.getElementById("status").textContent = "Unauthorized"; return; }
-    document.getElementById("status").textContent = "OK";
+
+    if (!j.ok) {
+      statusEl.textContent = `Unauthorized | ${tgInfo()}`;
+      return;
+    }
+
+    statusEl.textContent = `OK | ${tgInfo()}`;
+
     const tb = document.querySelector("#tbl tbody");
     tb.innerHTML = "";
-    for(const l of j.leads){
+    for (const l of j.leads) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>#${l.id}</td>
@@ -73,19 +87,21 @@
     }
   }
 
-  function esc(s){return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");}
+  function esc(s) {
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  }
 
   document.getElementById("reload").onclick = load;
-  document.addEventListener("click", async (e)=>{
+  document.addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-id]");
-    if(!b) return;
+    if (!b) return;
     const id = b.getAttribute("data-id");
     const st = b.getAttribute("data-st");
-    await api("/api/lead/" + id, { method:"POST", body: JSON.stringify({ status: st }) });
+    await api("/api/lead/" + id, { method: "POST", body: JSON.stringify({ status: st }) });
     await load();
   });
 
-  if(window.Telegram?.WebApp){ Telegram.WebApp.ready(); }
+  if (window.Telegram?.WebApp) Telegram.WebApp.ready();
   load();
 </script>
 </body>
