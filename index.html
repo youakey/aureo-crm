@@ -27,7 +27,8 @@
   </table>
 
 <script>
-  <script>
+  alert("CRM LOADED " + new Date().toISOString());
+  alert("tg=" + !!window.Telegram?.WebApp + " initDataLen=" + (window.Telegram?.WebApp?.initData || "").length);
   const workerBase = "https://aureo-leads.zerocppscript.workers.dev"; // <-- проверь
 
   function tg() {
