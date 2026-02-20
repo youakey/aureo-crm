@@ -46,7 +46,10 @@
   }
 
   async function load() {
-    document.getElementById("status").textContent = "Loading…";
+    const tg = window.Telegram?.WebApp;
+    document.getElementById("status").textContent =
+    `tg:${!!tg} initData:${(tg?.initData||"").length} user:${tg?.initDataUnsafe?.user?.id || "-"}`;
+
     const j = await api("/api/leads");
     if(!j.ok){ document.getElementById("status").textContent = "Unauthorized"; return; }
     document.getElementById("status").textContent = "OK";
