@@ -28,16 +28,36 @@
   </table>
 
 <script>
-  alert("CRM LOADED " + new Date().toISOString());
-  alert("tg=" + !!window.Telegram?.WebApp + " initDataLen=" + (window.Telegram?.WebApp?.initData || "").length);
   const workerBase = "https://aureo-leads.zerocppscript.workers.dev"; // <-- проверь
 
   function tg() {
     return window.Telegram?.WebApp;
   }
   function initData() {
-    return tg()?.initData || "";
+  const t = tg();
+  const fromSdk = t?.initData;
+  if (fromSdk && fromSdk.length > 0) {
+    sessionStorage.setItem("tg_initData", fromSdk);
+    return fromSdk;
   }
+
+  const hash = (location.hash || "").replace(/^#/, "");
+  const hp = new URLSearchParams(hash);
+  const fromHash = hp.get("tgWebAppData");
+  if (fromHash && fromHash.length > 0) {
+    sessionStorage.setItem("tg_initData", fromHash);
+    return fromHash;
+  }
+
+  const qp = new URLSearchParams(location.search);
+  const fromQuery = qp.get("tgWebAppData");
+  if (fromQuery && fromQuery.length > 0) {
+    sessionStorage.setItem("tg_initData", fromQuery);
+    return fromQuery;
+  }
+
+  return sessionStorage.getItem("tg_initData") || "";
+}
   function tgInfo() {
     const t = tg();
     const userId = t?.initDataUnsafe?.user?.id || "-";
