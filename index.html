@@ -8,7 +8,9 @@
   <style>
     body{font-family:system-ui;margin:16px;background:#0b0b0b;color:#fff}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-    button,select{padding:10px 12px;border-radius:10px;border:1px solid #333;background:#151515;color:#fff}
+    button{padding:10px 12px;border-radius:10px;border:1px solid #333;background:#151515;color:#fff;cursor:pointer}
+    button:hover{border-color:#555}
+    button.danger{border-color:#5a2a2a;background:#1a1010}
     table{width:100%;border-collapse:collapse}
     th,td{border-bottom:1px solid #222;padding:10px;text-align:left;vertical-align:top}
     .pill{padding:4px 10px;border:1px solid #333;border-radius:999px;display:inline-block}
@@ -28,40 +30,31 @@
   </table>
 
 <script>
-  const workerBase = "https://aureo-leads.zerocppscript.workers.dev"; // <-- проверь
+  const workerBase = "https://aureo-leads.zerocppscript.workers.dev"; // <-- твой aureo-leads
 
-  function tg() {
-    return window.Telegram?.WebApp;
-  }
+  function tg() { return window.Telegram?.WebApp; }
+
   function initData() {
-  const t = tg();
-  const fromSdk = t?.initData;
-  if (fromSdk && fromSdk.length > 0) {
-    sessionStorage.setItem("tg_initData", fromSdk);
-    return fromSdk;
+    const t = tg();
+    const fromSdk = t?.initData;
+    if (fromSdk && fromSdk.length > 0) {
+      sessionStorage.setItem("tg_initData", fromSdk);
+      return fromSdk;
+    }
+    const hash = (location.hash || "").replace(/^#/, "");
+    const hp = new URLSearchParams(hash);
+    const fromHash = hp.get("tgWebAppData");
+    if (fromHash && fromHash.length > 0) {
+      sessionStorage.setItem("tg_initData", fromHash);
+      return fromHash;
+    }
+    return sessionStorage.getItem("tg_initData") || "";
   }
 
-  const hash = (location.hash || "").replace(/^#/, "");
-  const hp = new URLSearchParams(hash);
-  const fromHash = hp.get("tgWebAppData");
-  if (fromHash && fromHash.length > 0) {
-    sessionStorage.setItem("tg_initData", fromHash);
-    return fromHash;
-  }
-
-  const qp = new URLSearchParams(location.search);
-  const fromQuery = qp.get("tgWebAppData");
-  if (fromQuery && fromQuery.length > 0) {
-    sessionStorage.setItem("tg_initData", fromQuery);
-    return fromQuery;
-  }
-
-  return sessionStorage.getItem("tg_initData") || "";
-}
   function tgInfo() {
     const t = tg();
     const userId = t?.initDataUnsafe?.user?.id || "-";
-    return `tg:${!!t} initData:${(t?.initData||"").length} user:${userId}`;
+    return `tg:${!!t} initData:${(initData()||"").length} user:${userId}`;
   }
 
   async function api(path, opts = {}) {
@@ -81,7 +74,6 @@
     statusEl.textContent = `Loading… | ${tgInfo()}`;
 
     const j = await api("/api/leads");
-
     if (!j.ok) {
       statusEl.textContent = `Unauthorized | ${tgInfo()}`;
       return;
@@ -104,7 +96,7 @@
         <td>
           <button data-id="${l.id}" data-st="new">New</button>
           <button data-id="${l.id}" data-st="done">Done</button>
-          <button data-id="${l.id}" data-act="del">Delete</button>
+          <button class="danger" data-id="${l.id}" data-act="del">Delete</button>
         </td>`;
       tb.appendChild(tr);
     }
@@ -115,25 +107,26 @@
   }
 
   document.getElementById("reload").onclick = load;
-  const b = e.target.closest("button[data-id]");
-if (!b) return;
 
-const id = b.getAttribute("data-id");
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-id]");
+    if (!b) return;
 
-// ✅ Delete
-if (b.getAttribute("data-act") === "del") {
-  if (!confirm("Delete this lead?")) return;
-  await api("/api/lead/" + id, { method: "DELETE" });
-  await load();
-  return;
-}
+    const id = b.getAttribute("data-id");
 
-// ✅ New / Done
-const st = b.getAttribute("data-st");
-await api("/api/lead/" + id, { method: "POST", body: JSON.stringify({ status: st }) });
-await load();
+    if (b.getAttribute("data-act") === "del") {
+      if (!confirm("Delete this lead?")) return;
+      await api("/api/lead/" + id, { method: "DELETE" });
+      await load();
+      return;
+    }
 
-  if (window.Telegram?.WebApp) window.Telegram.WebApp.ready();
+    const st = b.getAttribute("data-st");
+    await api("/api/lead/" + id, { method: "POST", body: JSON.stringify({ status: st }) });
+    await load();
+  });
+
+  if (tg()?.ready) tg().ready();
   load();
 </script>
 </body>
